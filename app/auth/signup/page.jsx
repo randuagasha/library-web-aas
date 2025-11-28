@@ -14,15 +14,53 @@ export default function SignUpPage() {
     password: "",
     confirmPassword: "",
   });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+      setError("Passwords do not match!");
       return;
     }
-    // Simple registration - redirect to home
-    router.push("/home");
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nama: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Registration failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // Registration successful, redirect to login
+      router.push("/auth/login?registered=true");
+    } catch (error) {
+      console.error("Registration error:", error);
+      setError("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -33,15 +71,15 @@ export default function SignUpPage() {
   };
 
   const illustration = (
-    <div className="w-full max-w-md"> 
+    <div className="w-full max-w-md">
       <Image
-      src="/picture/signup.png"
-      alt="illustration"
-      width={400}
-      height={400}
-      className="object-contain"
+        src="/picture/signup.png"
+        alt="illustration"
+        width={400}
+        height={400}
+        className="object-contain"
       ></Image>
-      </div>
+    </div>
   );
 
   return (
@@ -50,6 +88,12 @@ export default function SignUpPage() {
         <h1 className="text-3xl font-serif font-bold text-[#2E2E2E] mb-8">
           Welcome to Starbhak Library
         </h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -64,6 +108,7 @@ export default function SignUpPage() {
               onChange={handleChange}
               className="input-field text-[#2E2E2E] bg-[#FAF6F0] w-full h-10 rounded-md px-3 text-xs"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -79,6 +124,7 @@ export default function SignUpPage() {
               onChange={handleChange}
               className="input-field text-[#2E2E2E] bg-[#FAF6F0] w-full h-10 rounded-md px-3 text-xs"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -94,6 +140,7 @@ export default function SignUpPage() {
               onChange={handleChange}
               className="input-field text-[#2E2E2E] bg-[#FAF6F0] w-full h-10 rounded-md px-3 text-xs"
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -109,18 +156,23 @@ export default function SignUpPage() {
               onChange={handleChange}
               className="input-field text-[#2E2E2E] bg-[#FAF6F0] w-full h-10 rounded-md px-3 text-xs"
               required
+              disabled={isLoading}
             />
           </div>
 
           <div className="text-sm">
             <span className="text-gray-600">Already have an account? </span>
-            <Link href="/" className="text-[#5A7184] hover:underline font-medium">
+            <Link href="/auth/login" className="text-[#5A7184] hover:underline font-medium">
               Sign In
             </Link>
           </div>
 
-          <button type="submit" className="w-full h-10 rounded-2xl btn-primary bg-[#3A4750]">
-            Sign In
+          <button
+            type="submit"
+            className="w-full h-10 rounded-2xl btn-primary bg-[#3A4750] text-white hover:bg-[#2d373e] disabled:opacity-50"
+            disabled={isLoading}
+          >
+            {isLoading ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
       </div>
