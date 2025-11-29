@@ -26,6 +26,13 @@ export default function Sidebar() {
       icon: "/icon/categories.png",
       activeIcon: "/icon/categories_hover.png",
     },
+
+    {
+      name: "Settings",
+      path: "/settings",
+      icon: "/icon/setting.png",
+      activeIcon: "/icon/setting_hover.png"
+    }
   ];
 
   const isActive = (path) => pathname === path;
