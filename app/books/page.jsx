@@ -1,32 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import BookCard from "@/components/bookCard";
-import { books } from "@/lib/dummyData";
 
 export default function BooksPage() {
-  const [selectedCategory, setSelectedCategory] = useState("Self-Improvement");
+  const [books, setBooks] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const categories = [
+    "All",
     "Self-Improvement",
-    "Romance",
-    "Fiction",
-    "Non-Fiction",
     "Politics",
-    "Finance & Economics",
     "Biography",
+    "Politics-Biography",
+    "Fiction",
+    "Noval",
   ];
 
+  useEffect(() => {
+    async function loadBooks() {
+      try {
+        const res = await fetch("/api/books");
+        const data = await res.json();
+        setBooks(data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+    loadBooks();
+  }, []);
+
   const filteredBooks =
-    selectedCategory === "Self-Improvement"
-      ? books.filter((book) => book.category === "Self-Improvement")
-      : books.filter(
-          (book) =>
-            book.category.includes(selectedCategory) ||
-            book.category === selectedCategory
-        );
+    selectedCategory === "All"
+      ? books
+      : books.filter((b) => b.genre_buku === selectedCategory);
 
   return (
     <div className="flex min-h-screen bg-[#FAF6F0]">
@@ -36,7 +45,6 @@ export default function BooksPage() {
         <Header />
 
         <main className="mt-20 p-8">
-          {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Books Genres
@@ -49,7 +57,7 @@ export default function BooksPage() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-6 py-2 rounded-full font-medium transition-colors duration-200 ${
+                className={`px-6 py-2 rounded-full font-medium transition ${
                   selectedCategory === category
                     ? "bg-[#A0937D] text-[#FAF6F0]"
                     : "bg-[#FAF6F0] text-[#2E2E2E] hover:bg-gray-100"
@@ -62,18 +70,13 @@ export default function BooksPage() {
 
           {/* Books Grid */}
           <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Library Collections
-              </h2>
-              <button className="text-gray-600 hover:text-gray-900">
-                <span className="text-xl">☰</span>
-              </button>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Library Collections
+            </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {filteredBooks.map((book) => (
-                <BookCard key={book.id} book={book} />
+                <BookCard key={book.id_buku} book={book} />
               ))}
             </div>
           </section>

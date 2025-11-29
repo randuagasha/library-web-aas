@@ -40,7 +40,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 px-4">
         {menuItems.map((item) => (
-          <Link
+          <Link 
             key={item.path}
             href={item.path}
             className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-lg transition-colors duration-200 ${

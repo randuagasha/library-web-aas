@@ -1,34 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import BookCard from "@/components/bookCard";
-import { books } from "@/lib/dummyData";
 import Link from "next/link";
 
 export default function CategoriesPage() {
-  const selfImprovement = books
-    .filter((b) => b.category === "Self-Improvement")
-    .slice(0, 4);
-  const politicsBiography = books
-    .filter((b) => b.category.includes("Politics"))
-    .slice(0, 4);
-  const fiction = books.filter((b) => b.category === "Fiction").slice(0, 4);
-  const novel = books.filter((b) => b.category === "Novel").slice(0, 4);
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const res = await fetch("/api/books");
+        const data = await res.json();
+        setBooks(data);
+      } catch (err) {
+        console.error("Error fetching books:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
+  }, []);
+
+  const category = (name) =>
+    books.filter((b) => (b.genre_buku || "").toLowerCase().includes(name));
+
+  const selfImprovement = category("self").slice(0, 4);
+  const politicsBiography = category("politics").slice(0, 4);
+  const fiction = category("fiction").slice(0, 4);
+  const novel = category("novel").slice(0, 4);
 
   const BookSection = ({ title, books, slug }) => (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-[#2E2E2E]">{title}</h2>
+
         <Link
           href={`/books?category=${slug}`}
           className="text-primary hover:underline font-medium flex items-center gap-2"
         >
-          See More <span>→</span>
+          See More →
         </Link>
       </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {books.map((book) => (
-          <BookCard key={book.id} book={book} />
-        ))}
+        {books.length === 0 ? (
+          <p className="text-gray-600">No books found.</p>
+        ) : (
+          books.map((book) => <BookCard key={book.id_buku} book={book} />)
+        )}
       </div>
     </section>
   );
@@ -44,11 +68,11 @@ export default function CategoriesPage() {
           <BookSection
             title="Self-Improvement"
             books={selfImprovement}
-            slug="self-improvement"
+            slug="self"
           />
 
           <BookSection
-            title="Politics-Biography"
+            title="Politics & Biography"
             books={politicsBiography}
             slug="politics"
           />

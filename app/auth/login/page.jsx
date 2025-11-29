@@ -42,7 +42,7 @@ export default function LoginPage() {
             if (session?.user?.role === "admin") {
                 router.push("/admin/dashboard");
             } else {
-                router.push("/user/home");
+                router.push("/home");
             }
         } catch (error) {
             console.error("Login error:", error);

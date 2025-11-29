@@ -4,18 +4,40 @@ import { useSearch } from "../context/searchContext";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import BookCard from "@/components/bookCard";
-import { recentlyAdded, forYou } from "@/lib/dummyData";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
   const { query } = useSearch();
 
-  const filterBooks = (book) =>
-    book.title.toLowerCase().includes(query.toLowerCase());
+  const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredRecentlyAdded = recentlyAdded.filter(filterBooks);
-  const filteredForYou = forYou.filter(filterBooks);
+  useEffect(() => {
+    let mounted = true;
+    const fetchBooks = async () => {
+      try {
+        const res = await fetch("/api/books");
+        const data = await res.json();
+        if (mounted) setBooks(data);
+      } catch (err) {
+        console.error("Error fetching books:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchBooks();
+    return () => (mounted = false);
+  }, []);
+
+  const filterBooks = (book) =>
+    (book.nama_buku || "").toLowerCase().includes(query.toLowerCase());
+
+  const filteredBooks = books.filter(filterBooks);
+
+  const recentlyAdded = filteredBooks.slice(0, 3);
+  const forYou = filteredBooks.slice(3, 15); // ambil lebih banyak untuk section berikutnya
 
   return (
     <div className="flex min-h-screen bg-[#FAF6F0]">
@@ -25,6 +47,7 @@ export default function HomePage() {
         <Header />
 
         <main className="mt-20 p-8">
+          {/* ================= HERO ================= */}
           <section className="mb-12">
             <div className="card p-8 flex items-center justify-between">
               <div className="flex-1 max-w-xl">
@@ -34,12 +57,11 @@ export default function HomePage() {
                 <p className="text-[#2E2E2E] mb-6 leading-relaxed">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
                   do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  Ut enim ad
                 </p>
                 <Link href="/books">
-                <button className="bg-[#A0937D] rounded-md p-2 px-8 ">
-                  Explore Now
-                </button>
+                  <button className="bg-[#A0937D] rounded-md p-2 px-8">
+                    Explore Now
+                  </button>
                 </Link>
               </div>
 
@@ -47,7 +69,7 @@ export default function HomePage() {
                 <div className="w-32 h-44 flex items-center">
                   <Image
                     src="/picture/48power.png"
-                    alt="48power"
+                    alt="48 Laws of Power"
                     width={128}
                     height={176}
                     className="object-contain"
@@ -57,7 +79,7 @@ export default function HomePage() {
                 <div className="w-40 h-55 flex items-center">
                   <Image
                     src="/picture/dariPenjara.jpg"
-                    alt="dariPenjara"
+                    alt="Dari Penjara"
                     width={160}
                     height={220}
                     className="object-contain"
@@ -67,7 +89,7 @@ export default function HomePage() {
                 <div className="w-32 h-44 flex items-center">
                   <Image
                     src="/picture/richdad_poordad.jpg"
-                    alt="richdad_poordad"
+                    alt="Rich Dad Poor Dad"
                     width={128}
                     height={176}
                     className="object-contain"
@@ -77,34 +99,37 @@ export default function HomePage() {
             </div>
           </section>
 
+          {/* ================= RECENTLY ADDED ================= */}
           <section className="mb-12">
-            <h2 className="text-2xl flex font-semibold text-[#2E2E2E] mb-6">
+            <h2 className="text-2xl font-semibold text-[#2E2E2E] mb-6">
               Recently Added
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {filteredRecentlyAdded.map((book) => (
-                <BookCard key={book.id} book={book} horizontal />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {recentlyAdded.map((book) => (
+                <BookCard key={book.id_buku} book={book} />
               ))}
             </div>
           </section>
 
+          {/* ================= FOR YOU 1 ================= */}
           <section>
-            <h2 className="text-2xl flex font-semibold text-[#2E2E2E] mb-6">
+            <h2 className="text-2xl font-semibold text-[#2E2E2E] mb-6">
               For You
             </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {filteredForYou.slice(0, 8).map((book) => (
-                <BookCard key={book.id} book={book} />
+              {forYou.slice(0, 8).map((book) => (
+                <BookCard key={book.id_buku} book={book} />
               ))}
             </div>
           </section>
 
+          {/* ================= FOR YOU 2 ================= */}
           <section className="mt-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {filteredForYou.slice(8, 12).map((book) => (
-                <BookCard key={book.id} book={book} />
+              {forYou.slice(8, 16).map((book) => (
+                <BookCard key={book.id_buku} book={book} />
               ))}
             </div>
           </section>
