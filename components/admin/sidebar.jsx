@@ -13,7 +13,7 @@ export default function AdminSidebar() {
 
   const menuItems = [
     { name: "Dashboard", path: "/admin/dashboard", icon: "/icon/home.png", activeIcon: "/icon/home_hover.png" },
-    { name: "Collections", path: "/admin/collections", icon: "/icon/books.png", activeIcon: "/icon/books_hover.png" },
+    { name: "Books", path: "/admin/books", icon: "/icon/books.png", activeIcon: "/icon/books_hover.png" },
     { name: "Reports", path: "/admin/reports", icon: "/icon/categories.png", activeIcon: "/icon/categories_hover.png" },
   ];
 

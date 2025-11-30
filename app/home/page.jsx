@@ -6,30 +6,17 @@ import Header from "@/components/header";
 import BookCard from "@/components/bookCard";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import useSWR from "swr";
+
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function HomePage() {
   const { query } = useSearch();
 
-  const [books, setBooks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    const fetchBooks = async () => {
-      try {
-        const res = await fetch("/api/books");
-        const data = await res.json();
-        if (mounted) setBooks(data);
-      } catch (err) {
-        console.error("Error fetching books:", err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    fetchBooks();
-    return () => (mounted = false);
-  }, []);
+  // SWR untuk fetch dan auto refresh
+  const { data: books = [], error } = useSWR("/api/books", fetcher, {
+    refreshInterval: 5000, // fetch ulang tiap 5 detik
+  });
 
   const filterBooks = (book) =>
     (book.nama_buku || "").toLowerCase().includes(query.toLowerCase());
@@ -37,7 +24,14 @@ export default function HomePage() {
   const filteredBooks = books.filter(filterBooks);
 
   const recentlyAdded = filteredBooks.slice(0, 3);
-  const forYou = filteredBooks.slice(3, 15); // ambil lebih banyak untuk section berikutnya
+  const forYou = filteredBooks.slice(3, 15); // section berikutnya
+
+  if (error)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Failed to load books
+      </div>
+    );
 
   return (
     <div className="flex min-h-screen bg-[#FAF6F0]">
@@ -55,8 +49,8 @@ export default function HomePage() {
                   Fresh Books Has Arrived
                 </h1>
                 <p className="text-[#2E2E2E] mb-6 leading-relaxed">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
-                  do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                  Discover new books added by our admin. Explore and enjoy
+                  reading!
                 </p>
                 <Link href="/books">
                   <button className="bg-[#A0937D] rounded-md p-2 px-8">
@@ -104,7 +98,6 @@ export default function HomePage() {
             <h2 className="text-2xl font-semibold text-[#2E2E2E] mb-6">
               Recently Added
             </h2>
-
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {recentlyAdded.map((book) => (
                 <BookCard key={book.id_buku} book={book} />
@@ -117,7 +110,6 @@ export default function HomePage() {
             <h2 className="text-2xl font-semibold text-[#2E2E2E] mb-6">
               For You
             </h2>
-
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {forYou.slice(0, 8).map((book) => (
                 <BookCard key={book.id_buku} book={book} />
