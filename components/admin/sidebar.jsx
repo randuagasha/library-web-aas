@@ -5,16 +5,16 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import LogoutModal from "./ui/LogoutModal";
+import LogoutModal from "../ui/LogoutModal";
 
-export default function Sidebar() {
+export default function AdminSidebar() {
   const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
 
   const menuItems = [
-    { name: "Home", path: "/home", icon: "/icon/home.png", activeIcon: "/icon/home_hover.png" },
-    { name: "Books", path: "/books", icon: "/icon/books.png", activeIcon: "/icon/books_hover.png" },
-    { name: "Categories", path: "/categories", icon: "/icon/categories.png", activeIcon: "/icon/categories_hover.png" },
+    { name: "Dashboard", path: "/admin/dashboard", icon: "/icon/home.png", activeIcon: "/icon/home_hover.png" },
+    { name: "Collections", path: "/admin/collections", icon: "/icon/books.png", activeIcon: "/icon/books_hover.png" },
+    { name: "Reports", path: "/admin/reports", icon: "/icon/categories.png", activeIcon: "/icon/categories_hover.png" },
   ];
 
   const isActive = (path) => pathname === path;
@@ -52,7 +52,7 @@ export default function Sidebar() {
 
         <div className="px-4 mb-6">
           <Link
-            href="/settings"
+            href="/admin/settings"
             className="flex items-center gap-3 px-4 py-3 text-[#2E2E2E] hover:bg-gray-200 rounded-lg mb-2"
           >
             <Image src="/icon/setting.png" alt="Settings" width={24} height={24} className="w-6 h-6" />
@@ -78,4 +78,3 @@ export default function Sidebar() {
     </>
   );
 }
-  
