@@ -4,14 +4,24 @@ import Image from "next/image";
 export default function BookCard({ book, horizontal = false }) {
   // Data normalization
   const title = book.nama_buku ?? "Untitled";
-  const author = book.penulis ?? "Unknown Author";
+  const author = book.author ?? book.penulis ?? "Unknown Author";
   const cover = book.cover ?? book.gambar ?? null;
   const slugOrId = book.slug ?? book.id_buku;
 
   const normalizeImageSrc = (src) => {
     if (!src) return "/picture/placeholder.png";
+
+    // Jika src eksternal (http atau https), kembalikan langsung
+    if (src.startsWith("http://") || src.startsWith("https://")) return src;
+
+    // Jika ada slash di depan http/https, hapus slash pertama
+    if (src.startsWith("/http://") || src.startsWith("/https://"))
+      return src.slice(1);
+
+    // Jika path lokal di public
     if (src.startsWith("public/")) src = src.replace("public/", "");
     if (!src.startsWith("/")) src = "/" + src;
+
     return src;
   };
 

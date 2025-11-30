@@ -30,7 +30,7 @@ export default function AdminBooks() {
       await fetch("/api/admin/books", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, penulis: formData.author}),
       });
       fetchBooks();
     } catch (err) {
@@ -43,7 +43,7 @@ export default function AdminBooks() {
       await fetch("/api/admin/books", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, id_buku: editingBook.id_buku }),
+        body: JSON.stringify({ ...formData, penulis: formData.author, id_buku: editingBook.id_buku }),
       });
       setEditingBook(null);
       fetchBooks();
@@ -88,13 +88,8 @@ export default function AdminBooks() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {books.map((book) => (
-            <div
-              key={book.id_buku}
-              className="bg-[#FAF6F0] p-4 rounded-lg shadow"
-            >
-              <h3 className="text-lg font-semibold text-[#2e2e2e]">
-                {book.nama_buku}
-              </h3>
+            <div key={book.id_buku} className="bg-[#FAF6F0] p-4 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-[#2e2e2e]">{book.nama_buku}</h3>
               <p className="text-sm text-[#2E2E2E]">{book.penulis}</p>
               <p className="text-xs text-[#2E2E2E]">{book.genre_buku}</p>
               <div className="flex gap-2 mt-2">

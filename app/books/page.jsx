@@ -16,7 +16,7 @@ export default function BooksPage() {
     "Biography",
     "Politics-Biography",
     "Fiction",
-    "Noval",
+    "Novel",
   ];
 
   useEffect(() => {
