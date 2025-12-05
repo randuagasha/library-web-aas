@@ -126,7 +126,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex justify-between mb-4">
             <h3 className="text-lg font-bold text-[#2E2E2E]">Recent Borrows</h3>
-            <button onClick={exportCSV} className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50">Export CSV</button>
+            <button onClick={exportCSV} className="px-4 py-2 border border-[#2e2e2e] rounded-md text-[#2e2e2e] hover:bg-gray-50">Export CSV</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-gray-600 border-collapse">

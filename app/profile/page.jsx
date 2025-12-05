@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [nameInput, setNameInput] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  // ------------------ FETCH USER ------------------
   useEffect(() => {
     if (status === "loading") return;
 
@@ -32,13 +33,23 @@ export default function ProfilePage() {
     (async () => {
       try {
         const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
+        let data = null;
+
+        try {
+          const text = await res.text();
+          if (text) data = JSON.parse(text);
+        } catch {
+          console.warn("Invalid JSON from /api/auth/me, using fallback");
+        }
+
+        if (res.ok && data) {
           setUser(data);
           setNameInput(data.nama || "");
           return;
         }
-      } catch {}
+      } catch {
+        console.warn("Failed to fetch /api/auth/me, using session fallback");
+      }
 
       setUser({
         user_id: session.user?.id,
@@ -50,6 +61,7 @@ export default function ProfilePage() {
     })();
   }, [session, status]);
 
+  // ------------------ FETCH HISTORY ------------------
   useEffect(() => {
     if (!user) return;
     fetchHistory(page);
@@ -59,25 +71,33 @@ export default function ProfilePage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/history?page=${pageNumber}&pageSize=${pageSize}`,
-        { cache: "no-store" }
+        `/api/borrow?page=${pageNumber}&pageSize=${pageSize}`,
+        {
+          cache: "no-store",
+        }
       );
+
       const json = await res.json();
+
       if (res.ok) {
         setHistory(json.data || []);
         setTotalPages(json.totalPages || 0);
         setPage(json.page || 1);
       } else {
+        console.error("Fetch history failed:", json.error);
         setHistory([]);
         setTotalPages(0);
       }
     } catch (err) {
-      console.error("History error:", err);
+      console.error("History fetch error:", err);
+      setHistory([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
   }
 
+  // ------------------ AVATAR UPLOAD ------------------
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,7 +111,14 @@ export default function ProfilePage() {
         method: "POST",
         body: fd,
       });
-      const json = await res.json();
+
+      let json = {};
+      try {
+        const text = await res.text();
+        if (text) json = JSON.parse(text);
+      } catch {
+        console.warn("Invalid JSON from /api/profile/avatar");
+      }
 
       if (res.ok && json.avatar) {
         setUser((u) => ({ ...u, avatar: json.avatar }));
@@ -105,8 +132,10 @@ export default function ProfilePage() {
     }
   }
 
+  // ------------------ UPDATE NAME ------------------
   async function handleSaveName() {
     if (!nameInput?.trim()) return;
+
     try {
       const res = await fetch("/api/profile/update", {
         method: "PUT",
@@ -114,7 +143,14 @@ export default function ProfilePage() {
         body: JSON.stringify({ nama: nameInput }),
       });
 
-      const json = await res.json();
+      let json = {};
+      try {
+        const text = await res.text();
+        if (text) json = JSON.parse(text);
+      } catch {
+        console.warn("Invalid JSON from /api/profile/update");
+      }
+
       if (res.ok) {
         setUser((u) => ({ ...u, nama: nameInput }));
         setEditing(false);
@@ -126,6 +162,7 @@ export default function ProfilePage() {
     }
   }
 
+  // ------------------ RENDER ------------------
   if (status === "loading")
     return <div className="p-8">Loading session...</div>;
   if (!session || !user)
@@ -137,21 +174,16 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#FAF6F0] flex text-[#2E2E2E]">
-      {/* SIDEBAR */}
       <div className="w-[260px]">
         <Sidebar />
       </div>
 
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1">
-        {/* HEADER FIXED */}
         <div className="ml-280px flex bg-[#FAF6F0]">
           <Header />
         </div>
 
-        {/* CONTENT WRAPPER */}
         <div className="pt-24 px-6 max-w-4xl mx-auto">
-          {/* PROFILE CARD */}
           <div className="bg-[#FAF6F0] p-6 rounded-xl shadow-md flex gap-6 items-center">
             <div className="relative w-28 h-28 rounded-full overflow-hidden border">
               <Image
@@ -213,11 +245,10 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* STATS */}
           <div className="flex gap-4 mt-6">
             <div className="bg-[#FAF6F0] p-4 rounded shadow flex-1 text-center">
               <div className="text-sm text-gray-500">Total Borrows</div>
-              <div className="text-xl font-bold"></div>
+              <div className="text-xl font-bold">{history.length}</div>
             </div>
 
             <div className="bg-[#FAF6F0] p-4 rounded shadow flex-1 text-center">
@@ -228,7 +259,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* HISTORY */}
           <div className="mt-6 bg-[#FAF6F0] p-4 rounded shadow">
             <h2 className="text-lg font-semibold mb-4">Borrow History</h2>
 

@@ -4,50 +4,63 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import pool from "@/lib/db";
 
 // ============================================================
-// CREATE BORROW  (POST)
+// CREATE BORROW (POST)
 // ============================================================
 export async function POST(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  const { id_buku } = await req.json();
-
   try {
-    // cek status buku
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { book_id } = await req.json();
+
+    // cek buku
     const [bookRows] = await pool.query(
-      "SELECT status FROM books WHERE id_buku = ?",
-      [id_buku]
+      "SELECT jumlah_buku, status FROM books WHERE id_buku=?",
+      [book_id]
     );
 
-    if (bookRows.length === 0) {
+    if (!bookRows.length) {
       return NextResponse.json({ error: "Book not found" }, { status: 404 });
     }
 
-    if (bookRows[0].status === "dipinjam") {
+    const buku = bookRows[0];
+
+    if (buku.jumlah_buku <= 0) {
       return NextResponse.json(
-        { error: "Book already borrowed" },
+        { error: "Book is currently unavailable" },
         { status: 400 }
       );
     }
 
-    // Insert borrow
-    await pool.query(
-      `INSERT INTO borrows (user_id, id_buku, status) VALUES (?, ?, 'ongoing')`,
-      [userId, id_buku]
+    // INSERT BORROW
+    const [result] = await pool.query(
+      `INSERT INTO borrows (user_id, id_buku, status, borrow_date, due_date)
+       VALUES (?, ?, 'ongoing', NOW(), DATE_ADD(NOW(), INTERVAL 7 DAY))`,
+      [userId, book_id]
     );
 
-    // Update status buku
-    await pool.query("UPDATE books SET status = 'dipinjam' WHERE id_buku = ?", [
-      id_buku,
-    ]);
+    // KURANGI STOK
+    await pool.query(
+      "UPDATE books SET jumlah_buku = jumlah_buku - 1 WHERE id_buku=?",
+      [book_id]
+    );
+
+    // Jika habis → ubah status
+    if (buku.jumlah_buku - 1 <= 0) {
+      await pool.query(
+        "UPDATE books SET status='dipinjam' WHERE id_buku=?",
+        [book_id]
+      );
+    }
 
     return NextResponse.json({
-      message: "Borrow Success",
-      id_buku,
+      message: "Borrow success",
+      borrow_id: result.insertId,
       user_id: userId,
+      book_id,
     });
   } catch (err) {
     console.error("Borrow POST error:", err);
@@ -56,148 +69,155 @@ export async function POST(req) {
 }
 
 // ============================================================
-// RETURN BOOK  (PATCH)
+// RETURN BOOK (PATCH)
 // ============================================================
 export async function PATCH(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  const { id_buku } = await req.json();
-
   try {
-    // ambil data borrow aktif
-    const [borrowRows] = await pool.query(
-      `SELECT * FROM borrows 
-       WHERE id_buku = ? AND user_id = ? AND status = 'ongoing' 
-       ORDER BY borrow_id DESC LIMIT 1`,
-      [id_buku, userId]
-    );
-
-    if (borrowRows.length === 0) {
-      return NextResponse.json(
-        { error: "No active borrow found" },
-        { status: 404 }
-      );
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const borrow = borrowRows[0];
+    const userId = session.user.id;
+    const { borrow_id, book_id } = await req.json();
+
+    const [rows] = await pool.query(
+      "SELECT * FROM borrows WHERE borrow_id=? AND user_id=? AND status='ongoing'",
+      [borrow_id, userId]
+    );
+
+    if (!rows.length) {
+      return NextResponse.json({ error: "Borrow not found" }, { status: 404 });
+    }
+
+    // Hitung denda
+    const borrow = rows[0];
     let fine = 0;
 
-    // hitung denda
     const now = new Date();
     const due = new Date(borrow.due_date);
 
     if (now > due) {
-      const diffTime = now - due;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      fine = diffDays * 1000; // contoh denda 1.000/hari
+      const diffDays = Math.ceil((now - due) / (1000 * 60 * 60 * 24));
+      fine = diffDays * 1000;
     }
 
-    // update data borrow
+    // UPDATE BORROW
     await pool.query(
-      `UPDATE borrows 
-       SET return_date = CURRENT_TIMESTAMP, status = 'returned', fine_amount = ?
-       WHERE borrow_id = ?`,
-      [fine, borrow.borrow_id]
+      "UPDATE borrows SET status='returned', return_date=NOW(), fine_amount=? WHERE borrow_id=?",
+      [fine, borrow_id]
     );
 
-    // update status buku
-    await pool.query("UPDATE books SET status = 'tersedia' WHERE id_buku = ?", [
-      id_buku,
-    ]);
+    // KEMBALIKAN STOK
+    const [book] = await pool.query(
+      "SELECT jumlah_buku FROM books WHERE id_buku=?",
+      [book_id]
+    );
+
+    const newStock = book[0].jumlah_buku + 1;
+
+    await pool.query(
+      "UPDATE books SET jumlah_buku=? WHERE id_buku=?",
+      [newStock, book_id]
+    );
+
+    if (newStock > 0) {
+      await pool.query(
+        "UPDATE books SET status='tersedia' WHERE id_buku=?",
+        [book_id]
+      );
+    }
 
     return NextResponse.json({
       message: "Book returned",
       fine,
     });
   } catch (err) {
-    console.error("Borrow RETURN error:", err);
+    console.error("Borrow PATCH error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 // ============================================================
-// EXTEND DUE DATE  (PUT)
+// EXTEND BORROW (PUT)
 // ============================================================
 export async function PUT(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  const { id_buku } = await req.json();
-
   try {
-    // cari borrow aktif
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { borrow_id } = await req.json();
+
     const [rows] = await pool.query(
-      `SELECT * FROM borrows WHERE id_buku = ? AND user_id = ? AND status = 'ongoing'
-       ORDER BY borrow_id DESC LIMIT 1`,
-      [id_buku, userId]
+      "SELECT * FROM borrows WHERE borrow_id=? AND user_id=? AND status='ongoing'",
+      [borrow_id, userId]
     );
 
-    if (rows.length === 0) {
+    if (!rows.length) {
       return NextResponse.json(
-        { error: "You have no active borrow for this book" },
+        { error: "No active borrow found" },
         { status: 404 }
       );
     }
 
-    // extend +7 hari dari due_date
     await pool.query(
-      `UPDATE borrows 
-       SET due_date = DATE_ADD(due_date, INTERVAL 7 DAY)
-       WHERE borrow_id = ?`,
-      [rows[0].borrow_id]
+      "UPDATE borrows SET due_date = DATE_ADD(due_date, INTERVAL 7 DAY) WHERE borrow_id=?",
+      [borrow_id]
     );
 
-    return NextResponse.json({ message: "Borrow period extended (+7 days)" });
+    return NextResponse.json({ message: "Borrow extended (+7 days)" });
   } catch (err) {
-    console.error("Borrow EXTEND error:", err);
+    console.error("Borrow PUT error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 // ============================================================
-// GET HISTORY (GET)
+// GET BORROW HISTORY (GET)
 // ============================================================
 export async function GET(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-
   try {
-    const [rows] = await pool.query(
-      `SELECT 
-        b.borrow_id,
-        b.borrow_date,
-        b.due_date,
-        b.return_date,
-        b.status,
-        b.fine_amount,
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-        bk.id_buku,
-        bk.nama_buku,
-        bk.author,
-        bk.gambar,
-        bk.genre_buku
+    const userId = session.user.id;
+    const { searchParams } = new URL(req.url);
 
-      FROM borrows b
-      JOIN books bk ON b.id_buku = bk.id_buku
-      WHERE b.user_id = ?
-      ORDER BY b.borrow_date DESC`,
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "5");
+    const offset = (page - 1) * pageSize;
+
+    const [[{ total }]] = await pool.query(
+      "SELECT COUNT(*) AS total FROM borrows WHERE user_id=?",
       [userId]
     );
 
-    return NextResponse.json(rows);
+    const [rows] = await pool.query(
+      `SELECT b.borrow_id, b.borrow_date, b.due_date, b.return_date,
+              b.status, b.fine_amount,
+              bk.id_buku, bk.nama_buku, bk.author, bk.gambar
+       FROM borrows b
+       JOIN books bk ON b.id_buku = bk.id_buku
+       WHERE b.user_id=?
+       ORDER BY b.borrow_date DESC
+       LIMIT ? OFFSET ?`,
+      [userId, pageSize, offset]
+    );
+
+    return NextResponse.json({
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+      data: rows,
+    });
   } catch (err) {
-    console.error("Borrow HISTORY error:", err);
+    console.error("Borrow GET error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

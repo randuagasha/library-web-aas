@@ -7,14 +7,13 @@ export default function HistoryCard({ item }) {
     if (!src) return "/picture/placeholder.png";
     if (src.startsWith("http")) return src;
     if (src.startsWith("/http")) return src.slice(1);
-    if (src.startsWith("public/")) return src.replace("public/", "");
+    if (src.startsWith("public/")) return src.replace("public/", "/");
     if (!src.startsWith("/")) return "/" + src;
     return src;
   };
 
   return (
     <div className="flex gap-4 p-4 bg-white rounded-xl shadow hover:scale-[1.01] transition">
-      {/* Cover */}
       <div className="w-24 h-32 relative rounded-lg overflow-hidden bg-gray-200">
         <Image
           src={normalizeSrc(cover)}
@@ -24,7 +23,6 @@ export default function HistoryCard({ item }) {
         />
       </div>
 
-      {/* Info */}
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <h3 className="font-semibold text-gray-900 line-clamp-2">
