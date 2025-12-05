@@ -50,10 +50,9 @@ export async function POST(req) {
 
     // Jika habis → ubah status
     if (buku.jumlah_buku - 1 <= 0) {
-      await pool.query(
-        "UPDATE books SET status='dipinjam' WHERE id_buku=?",
-        [book_id]
-      );
+      await pool.query("UPDATE books SET status='dipinjam' WHERE id_buku=?", [
+        book_id,
+      ]);
     }
 
     return NextResponse.json({
@@ -116,16 +115,15 @@ export async function PATCH(req) {
 
     const newStock = book[0].jumlah_buku + 1;
 
-    await pool.query(
-      "UPDATE books SET jumlah_buku=? WHERE id_buku=?",
-      [newStock, book_id]
-    );
+    await pool.query("UPDATE books SET jumlah_buku=? WHERE id_buku=?", [
+      newStock,
+      book_id,
+    ]);
 
     if (newStock > 0) {
-      await pool.query(
-        "UPDATE books SET status='tersedia' WHERE id_buku=?",
-        [book_id]
-      );
+      await pool.query("UPDATE books SET status='tersedia' WHERE id_buku=?", [
+        book_id,
+      ]);
     }
 
     return NextResponse.json({
@@ -219,5 +217,34 @@ export async function GET(req) {
   } catch (err) {
     console.error("Borrow GET error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+// ------------------ FUNCTION TO RETURN BOOK ------------------
+async function handleReturn(borrow_id, book_id) {
+  if (!confirm("Are you sure you want to return this book?")) return;
+
+  try {
+    const res = await fetch("/api/borrow", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ borrow_id, book_id }),
+    });
+
+    const json = await res.json();
+
+    if (res.ok) {
+      alert(
+        `Book returned successfully${
+          json.fine > 0 ? `. Fine: Rp ${json.fine.toLocaleString()}` : ""
+        }`
+      );
+      fetchHistory(page);
+    } else {
+      alert(json.error || "Failed to return book");
+    }
+  } catch (err) {
+    console.error("Return book error:", err);
+    alert("Failed to return book");
   }
 }

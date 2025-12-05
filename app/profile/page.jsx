@@ -97,6 +97,35 @@ export default function ProfilePage() {
     }
   }
 
+  // ------------------ RETURN BOOK ------------------
+  async function handleReturn(borrow_id, book_id) {
+    if (!confirm("Are you sure you want to return this book?")) return;
+
+    try {
+      const res = await fetch("/api/borrow", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ borrow_id, book_id }),
+      });
+
+      const json = await res.json();
+
+      if (res.ok) {
+        alert(
+          `Book returned successfully${
+            json.fine > 0 ? `. Fine: Rp ${json.fine.toLocaleString()}` : ""
+          }`
+        );
+        fetchHistory(page); // refresh history
+      } else {
+        alert(json.error || "Failed to return book");
+      }
+    } catch (err) {
+      console.error("Return book error:", err);
+      alert("Failed to return book");
+    }
+  }
+
   // ------------------ AVATAR UPLOAD ------------------
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
@@ -184,6 +213,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="pt-24 px-6 max-w-4xl mx-auto">
+          {/* PROFILE HEADER */}
           <div className="bg-[#FAF6F0] p-6 rounded-xl shadow-md flex gap-6 items-center">
             <div className="relative w-28 h-28 rounded-full overflow-hidden border">
               <Image
@@ -245,6 +275,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* STATS */}
           <div className="flex gap-4 mt-6">
             <div className="bg-[#FAF6F0] p-4 rounded shadow flex-1 text-center">
               <div className="text-sm text-gray-500">Total Borrows</div>
@@ -259,6 +290,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* BORROW HISTORY */}
           <div className="mt-6 bg-[#FAF6F0] p-4 rounded shadow">
             <h2 className="text-lg font-semibold mb-4">Borrow History</h2>
 
@@ -274,7 +306,7 @@ export default function ProfilePage() {
                       key={h.borrow_id}
                       className="p-3 border rounded flex gap-3 items-start"
                     >
-                      <div className="relative w-20 h-28 flex-shrink-0">
+                      <div className="relative w-20 h-28">
                         <Image
                           src={h.gambar || "/placeholder.png"}
                           alt={h.nama_buku}
@@ -325,6 +357,20 @@ export default function ProfilePage() {
                             <div className="text-red-600">
                               Fine: Rp {h.fine_amount.toLocaleString()}
                             </div>
+                          )}
+                        </div>
+
+                        {/* RETURN BUTTON */}
+                        <div className="mt-2 flex gap-2">
+                          {h.status === "ongoing" && (
+                            <button
+                              onClick={() =>
+                                handleReturn(h.borrow_id, h.id_buku)
+                              }
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                            >
+                              Return
+                            </button>
                           )}
                         </div>
                       </div>
