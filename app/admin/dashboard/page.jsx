@@ -86,16 +86,16 @@ export default function AdminDashboard() {
             {label:"Overdue Books", value: stats.overdue, icon:"⏰"},
             {label:"Users Registered", value: stats.usersRegistered, icon:"👥"}
           ].map((s,i)=>(
-            <div key={i} className="bg-white p-6 rounded-lg shadow">
+            <div key={i} className="bg-[#FAF6F0] p-6 rounded-lg shadow">
               <div className="text-3xl mb-2">{s.icon}</div>
               <div className="text-2xl font-bold text-[#2E2E2E]">{s.value}</div>
-              <div className="text-sm text-gray-600">{s.label}</div>
+              <div className="text-sm text-[#2e2e2e]">{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Borrow by Category Pie Chart */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <div className="bg-[#faf6f0] p-6 rounded-lg shadow mb-8">
           <h3 className="text-lg font-bold text-[#2E2E2E] mb-6">Borrow by Category</h3>
           {borrowByCategory.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Borrows Table */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-[#faf6f0] p-6 rounded-lg shadow">
           <div className="flex justify-between mb-4">
             <h3 className="text-lg font-bold text-[#2E2E2E]">Recent Borrows</h3>
             <button onClick={exportCSV} className="px-4 py-2 border border-[#2e2e2e] rounded-md text-[#2e2e2e] hover:bg-gray-50">Export CSV</button>

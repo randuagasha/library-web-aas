@@ -72,9 +72,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch(
         `/api/borrow?page=${pageNumber}&pageSize=${pageSize}`,
-        {
-          cache: "no-store",
-        }
+        { cache: "no-store" }
       );
 
       const json = await res.json();
@@ -94,35 +92,6 @@ export default function ProfilePage() {
       setTotalPages(0);
     } finally {
       setLoading(false);
-    }
-  }
-
-  // ------------------ RETURN BOOK ------------------
-  async function handleReturn(borrow_id, book_id) {
-    if (!confirm("Are you sure you want to return this book?")) return;
-
-    try {
-      const res = await fetch("/api/borrow", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ borrow_id, book_id }),
-      });
-
-      const json = await res.json();
-
-      if (res.ok) {
-        alert(
-          `Book returned successfully${
-            json.fine > 0 ? `. Fine: Rp ${json.fine.toLocaleString()}` : ""
-          }`
-        );
-        fetchHistory(page); // refresh history
-      } else {
-        alert(json.error || "Failed to return book");
-      }
-    } catch (err) {
-      console.error("Return book error:", err);
-      alert("Failed to return book");
     }
   }
 
@@ -191,6 +160,53 @@ export default function ProfilePage() {
     }
   }
 
+  // ------------------ RETURN BOOK ------------------
+  async function handleReturn(borrow_id, book_id) {
+    try {
+      const res = await fetch("/api/borrow", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ borrow_id, book_id }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(
+          "Book returned successfully" +
+            (data.fine ? `, fine: Rp ${data.fine}` : "")
+        );
+        fetchHistory(page); // refresh history
+      } else {
+        alert(data.error || "Failed to return book");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to return book");
+    }
+  }
+
+  // ------------------ EXTEND BORROW ------------------
+  async function handleExtend(borrow_id) {
+    try {
+      const res = await fetch("/api/borrow", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ borrow_id }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        fetchHistory(page); // refresh history
+      } else {
+        alert(data.error || "Failed to extend borrow");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to extend borrow");
+    }
+  }
+
   // ------------------ RENDER ------------------
   if (status === "loading")
     return <div className="p-8">Loading session...</div>;
@@ -213,7 +229,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="pt-24 px-6 max-w-4xl mx-auto">
-          {/* PROFILE HEADER */}
+          {/* PROFILE CARD */}
           <div className="bg-[#FAF6F0] p-6 rounded-xl shadow-md flex gap-6 items-center">
             <div className="relative w-28 h-28 rounded-full overflow-hidden border">
               <Image
@@ -324,7 +340,7 @@ export default function ProfilePage() {
                             </div>
                           </div>
 
-                          <div className="text-xs">
+                          <div className="text-xs flex flex-col gap-1">
                             <div
                               className={`px-2 py-1 rounded text-white ${
                                 h.status === "returned"
@@ -336,6 +352,26 @@ export default function ProfilePage() {
                             >
                               {h.status}
                             </div>
+
+                            {/* RETURN & EXTEND BUTTONS */}
+                            {h.status === "ongoing" && (
+                              <div className="flex gap-2 mt-1">
+                                <button
+                                  onClick={() =>
+                                    handleReturn(h.borrow_id, h.id_buku)
+                                  }
+                                  className="px-2 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
+                                >
+                                  Return
+                                </button>
+                                <button
+                                  onClick={() => handleExtend(h.borrow_id)}
+                                  className="px-2 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
+                                >
+                                  Extend
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -357,20 +393,6 @@ export default function ProfilePage() {
                             <div className="text-red-600">
                               Fine: Rp {h.fine_amount.toLocaleString()}
                             </div>
-                          )}
-                        </div>
-
-                        {/* RETURN BUTTON */}
-                        <div className="mt-2 flex gap-2">
-                          {h.status === "ongoing" && (
-                            <button
-                              onClick={() =>
-                                handleReturn(h.borrow_id, h.id_buku)
-                              }
-                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                            >
-                              Return
-                            </button>
                           )}
                         </div>
                       </div>
