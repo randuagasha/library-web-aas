@@ -5,118 +5,232 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
+import BookCard from "@/components/bookCard";
 
-export default function BookDetail() {
+export default function BookDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-
   const [book, setBook] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingBorrow, setLoadingBorrow] = useState(false);
+
+  // recommendations for "For You" subpage
+  const [recs, setRecs] = useState([]);
+  const [recsLoading, setRecsLoading] = useState(true);
 
   useEffect(() => {
     async function loadBook() {
-      try {
-        const res = await fetch(`/api/books/${id}`);
-        const data = await res.json();
-        console.log("BOOK DETAIL:", data);x
-        setBook(data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching book:", err);
-      }
+      const res = await fetch(`/api/books/${id}`);
+      const data = await res.json();
+      setBook(data);
     }
     loadBook();
   }, [id]);
 
+  // fetch recommended books (simple list) - styling only, doesn't change main logic
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRecs() {
+      setRecsLoading(true);
+      try {
+        // try to fetch a list of books; if your API uses a different route adjust here
+        const res = await fetch(`/api/books`);
+        if (!res.ok) {
+          setRecs([]);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          // if API returns array directly or { data: [...] }
+          const arr = Array.isArray(data) ? data : data.data || [];
+          // exclude current book and take up to 12
+          setRecs(arr.filter((b) => String(b.id) !== String(id)).slice(0, 12));
+        }
+      } catch (err) {
+        console.error("recs fetch error", err);
+        if (!cancelled) setRecs([]);
+      } finally {
+        if (!cancelled) setRecsLoading(false);
+      }
+    }
+    loadRecs();
+    return () => (cancelled = true);
+  }, [id]);
+
   async function handleBorrow() {
+    setLoadingBorrow(true);
     try {
       const res = await fetch("/api/borrow", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book_id: book.id_buku }),
+        body: JSON.stringify({ book_id: id }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         alert(data.error);
+        setLoadingBorrow(false);
         return;
       }
 
-      alert("Book borrowed successfully!");
-      router.push("/books");
-    } catch (error) {
-      console.error(error);
+      alert("Borrow success!");
+      router.push("/profile");
+    } catch (err) {
+      console.error(err);
     }
+    setLoadingBorrow(false);
   }
 
-  if (loading) return <p>Loading...</p>;
+  if (!book) return <p className="p-10">Loading...</p>;
 
   return (
-    <div className="flex min-h-screen bg-[#FAF6F0]">
-      <Sidebar />
-      <div className="ml-[280px] flex-1">
-        <Header />
+    <div className="min-h-screen bg-[#FAF6F0] text-[#2E2E2E] flex">
+      <div className="w-[260px]">
+        <Sidebar />
+      </div>
 
-        <main className="mt-20 p-8">
-          <div className="bg-white shadow-lg rounded-xl p-6 flex gap-8">
-            {/* IMAGE */}
-            <div className="relative w-64 h-96 rounded overflow-hidden shadow">
-              <Image
-                src={book.gambar || "/placeholder.png"}
-                alt={book.nama_buku || "Book Cover"}
-                fill
-                className="object-cover bg-gray-200"
-                unoptimized
-              />
-            </div>
+      {/* MAIN AREA */}
+      <div className="flex-1 relative">
+        <div className="ml-[280px] bg-[#FAF6F0]">
+          <Header />
+        </div>
 
-            {/* BOOK INFO */}
-            <div className="flex flex-col justify-between flex-1">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {book.nama_buku}
-                </h1>
+        {/* CONTENT (push down to avoid header) */}
+        <main className="pt-24 px-8 pb-12 max-w-6xl mx-auto">
+          {/* Back arrow */}
+          <div className="mb-4">
+            <button
+              onClick={() => history.back()}
+              className="inline-flex items-center gap-2 text-sm text-[#2E2E2E] opacity-80 hover:opacity-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back
+            </button>
+          </div>
 
-                <p className="text-gray-600 mt-2 text-lg">
-                  Author: {book.author}
-                </p>
-
-                <p className="mt-1 text-gray-700">Genre: {book.genre_buku}</p>
-
-                <p className="mt-4 text-gray-800">
-                  {book.deskripsi || "Tidak ada deskripsi."}
-                </p>
-
-                <p className="mt-4 font-semibold text-[#2e2e2e]">
-                  Status:{" "}
-                  <span
-                    className={
-                      book.status === "tersedia"
-                        ? "text-green-700"
-                        : "text-red-600"
-                    }
-                  >
-                    {book.status}
-                  </span>
-                </p>
+          {/* Detail card */}
+          <section className="bg-[#FAF6F0]/80 border border-[#E6DDCF] rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-48">
+                <div className="relative w-full h-[340px] md:h-[360px] rounded-lg overflow-hidden">
+                  <Image
+                    src={book.gambar || "/placeholder.png"}
+                    alt={book.nama_buku}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
 
-              <button
-                onClick={handleBorrow}
-                disabled={book.status !== "tersedia"}
-                className={`mt-6 px-6 py-3 rounded-lg w-fit font-semibold transition ${
-                  book.status === "tersedia"
-                    ? "bg-[#A0937D] text-white hover:bg-[#8a816c]"
-                    : "bg-gray-400 text-white cursor-not-allowed"
-                }`}
-              >
-                {book.status === "tersedia"
-                  ? "Borrow Book"
-                  : "Currently Unavailable"}
-              </button>
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-semibold">
+                      {book.nama_buku}
+                    </h1>
+                    <p className="text-sm text-gray-600 mt-1">{book.author}</p>
+
+                    {/* tags (if available) */}
+                    {book.tags && book.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {book.tags.map((t, i) => (
+                          <span
+                            key={i}
+                            className="text-xs px-3 py-1 rounded-full border border-[#E6DDCF] text-[#2E2E2E]"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* availability */}
+                    <div className="mt-4">
+                      <span className="text-green-600 font-semibold">
+                        Available ({book.available_count ?? 0})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* bookmark icon */}
+                  <div className="ml-4">
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200">
+                      <Image
+                        src="/icon/save.png"
+                        alt="Save Book"
+                        width={20}
+                        height={20}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* description */}
+                <p className="mt-6 text-[#2e2e2e] leading-relaxed">
+                  {book.description}
+                </p>
+
+                {/* actions */}
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button
+                    className="px-4 py-2 rounded-lg border text-sm hover:bg-[#f3efe7]"
+                    onClick={() => {
+                      if (book.ebook_link)
+                        window.open(book.ebook_link, "_blank");
+                      else alert("E-Book not available");
+                    }}
+                  >
+                    Buy E-Book
+                  </button>
+
+                  <button
+                    onClick={handleBorrow}
+                    disabled={book.status_buku === "borrowed" || loadingBorrow}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                      book.status_buku === "borrowed"
+                        ? "bg-[#FAF6F0] text-white cursor-not-allowed"
+                        : "bg-[#FAF6F0] border border-[#008CFF] text-[#008CFF] hover:bg-[#e2f2ff]"
+                    }`}
+                  >
+                    {loadingBorrow
+                      ? "Processing..."
+                      : book.status_buku === "borrowed"
+                      ? "Already Borrowed"
+                      : "Borrow Now"}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
+
+          {/* Subpage: For You */}
+          <section className="mt-10">
+            <h2 className="text-lg font-semibold mb-4">For You</h2>
+
+            {recsLoading ? (
+              <div className="text-gray-500">Loading recommendations…</div>
+            ) : recs.length === 0 ? (
+              <div className="text-gray-500">No recommendations available.</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-6">
+                {recs.map((book, index) => (
+                  <BookCard key={book.id_buku ?? index} book={book} />
+                ))}
+              </div>
+            )}
+          </section>
         </main>
       </div>
     </div>

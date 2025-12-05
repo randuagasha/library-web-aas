@@ -2,6 +2,7 @@
 
 import { useSearch } from "@/app/context/searchContext";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Header() {
   const { query: searchQuery, setQuery: setSearchQuery } = useSearch();
@@ -39,7 +40,11 @@ export default function Header() {
           />
         </button>
 
-        <button className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200">
+        {/* PROFILE BUTTON */}
+        <Link
+          href="/profile"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200"
+        >
           <Image
             src="/icon/profile.png"
             alt="Profile"
@@ -48,7 +53,7 @@ export default function Header() {
             className="w-9 h-9"
           />
           <span className="text-gray-900 font-medium"></span>
-        </button>
+        </Link>
       </div>
     </header>
   );

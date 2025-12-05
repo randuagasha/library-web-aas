@@ -1,27 +1,39 @@
-import { NextResponse } from "next/server";
-import pool from "@/lib/db";
+import db from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const genre = searchParams.get("genre");
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id || null;
 
-    let query = "SELECT * FROM books ORDER BY created_at DESC";
-    let params = [];
+    const [rows] = await db.query(`
+      SELECT 
+        books.*,
 
-    if (genre) {
-      query =
-        "SELECT * FROM books WHERE genre_buku = ? ORDER BY created_at DESC";
-      params = [genre];
-    }
+        -- cek apakah buku sedang dipinjam dan oleh siapa
+        (
+          SELECT user_id 
+          FROM borrows 
+          WHERE borrows.id_buku = books.id_buku 
+          AND borrows.status IN ('pending','ongoing','requested_return')
+          LIMIT 1
+        ) AS borrowed_by
 
-    const [books] = await pool.query(query, params);
-    return NextResponse.json(books);
+      FROM books
+      ORDER BY books.id_buku DESC
+    `);
+
+    const books = Array.isArray(rows) ? rows : [];
+
+    const formatted = books.map((b) => ({
+      ...b,
+      isBorrowedByUser: b.borrowed_by == userId,
+    }));
+
+    return Response.json(formatted, { status: 200 });
   } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      { error: "Failed to fetch books" },
-      { status: 500 }
-    );
+    console.error("BOOKS API ERROR:", err);
+    return Response.json([], { status: 200 });
   }
 }

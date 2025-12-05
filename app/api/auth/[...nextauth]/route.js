@@ -3,8 +3,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import pool from "@/lib/db";
 
-// Ini untuk dipakai di API lain
 export const authOptions = {
+  session: {
+    strategy: "jwt",
+  },
+
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -17,40 +20,28 @@ export const authOptions = {
           throw new Error("Email and password are required");
         }
 
-        try {
-          const [rows] = await pool.query(
-            "SELECT * FROM users WHERE email = ?",
-            [credentials.email]
-          );
+        const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [
+          credentials.email,
+        ]);
 
-          if (rows.length === 0) {
-            throw new Error("No user found with this email");
-          }
+        if (rows.length === 0) throw new Error("No user found");
 
-          const user = rows[0];
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
+        const user = rows[0];
+        const valid = await bcrypt.compare(credentials.password, user.password);
 
-          if (!isPasswordValid) {
-            throw new Error("Invalid password");
-          }
+        if (!valid) throw new Error("Invalid password");
 
-          return {
-            id: user.user_id.toString(),
-            email: user.email,
-            name: user.nama,
-            role: user.role,
-            avatar: user.avatar,
-          };
-        } catch (error) {
-          console.error("Authorization error:", error);
-          throw new Error(error.message || "Authentication failed");
-        }
+        return {
+          id: user.user_id.toString(),
+          email: user.email,
+          name: user.nama,
+          role: user.role,
+          avatar: user.avatar,
+        };
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -60,22 +51,33 @@ export const authOptions = {
       }
       return token;
     },
+
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.avatar = token.avatar;
-      }
+      session.user.id = token.id;
+      session.user.role = token.role;
+      session.user.avatar = token.avatar;
       return session;
     },
   },
+
+  // 🔥 FIX AVATAR HILANG → Refresh token setiap kali profile berubah
+  events: {
+    async update({ token }) {
+      const [rows] = await pool.query(
+        "SELECT avatar FROM users WHERE user_id = ?",
+        [token.id]
+      );
+
+      if (rows.length > 0) {
+        token.avatar = rows[0].avatar;
+      }
+    },
+  },
+
   pages: {
     signIn: "/auth/login",
   },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 hari
-  },
+
   secret: process.env.NEXTAUTH_SECRET,
 };
 
