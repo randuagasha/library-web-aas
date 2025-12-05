@@ -2,51 +2,45 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function BookCard({ book, horizontal = false }) {
-  // Data normalization
-  const title = book.nama_buku ?? "Untitled";
-  const author = book.author ?? book.penulis ?? "Unknown Author";
-  const cover = book.cover ?? book.gambar ?? null;
-  const slugOrId = book.slug ?? book.id_buku;
+  const title = book.nama_buku || "Untitled";
+  const author = book.author || "Unknown Author";
+  const cover = book.gambar || "/picture/placeholder.png";
+  const id = book.id_buku;
 
+  // Normalisasi gambar (handle http, https, local)
   const normalizeImageSrc = (src) => {
     if (!src) return "/picture/placeholder.png";
 
-    // Jika src eksternal (http atau https), kembalikan langsung
+    // Kalau eksternal URL
     if (src.startsWith("http://") || src.startsWith("https://")) return src;
 
-    // Jika ada slash di depan http/https, hapus slash pertama
-    if (src.startsWith("/http://") || src.startsWith("/https://"))
+    // Kalau ada slash salah
+    if (src.startsWith("/http://") || src.startsWith("/https://")) {
       return src.slice(1);
+    }
 
-    // Jika path lokal di public
+    // Kalau path lokal dari public
     if (src.startsWith("public/")) src = src.replace("public/", "");
     if (!src.startsWith("/")) src = "/" + src;
 
     return src;
   };
 
+  // Render rating
   const renderStars = (rating) => {
-    const stars = [];
     const full = Math.floor(rating || 0);
-    for (let i = 0; i < 5; i++) {
-      stars.push(
-        <span
-          key={i}
-          className={i < full ? "text-yellow-400" : "text-gray-300"}
-        >
-          ⭐
-        </span>
-      );
-    }
-    return stars;
+    return Array.from({ length: 5 }, (_, i) => (
+      <span key={i} className={i < full ? "text-yellow-400" : "text-gray-300"}>
+        ⭐
+      </span>
+    ));
   };
 
   /* ================= HORIZONTAL CARD ================= */
   if (horizontal) {
     return (
-      <Link href={`/books/${slugOrId}`}>
+      <Link href={`/books/${book.id_buku}`}>
         <div className="card flex h-40 overflow-hidden hover:scale-[1.02] transition-transform duration-300 rounded-xl shadow">
-          {/* Cover */}
           <div className="w-28 h-full bg-gray-100 relative flex items-center justify-center">
             <Image
               src={normalizeImageSrc(cover)}
@@ -57,7 +51,6 @@ export default function BookCard({ book, horizontal = false }) {
             />
           </div>
 
-          {/* Info */}
           <div className="flex-1 p-4 flex flex-col justify-between">
             <div>
               <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
@@ -78,9 +71,8 @@ export default function BookCard({ book, horizontal = false }) {
 
   /* ================= VERTICAL CARD ================= */
   return (
-    <Link href={`/books/${slugOrId}`}>
+    <Link href={`/books/${book.id_buku}`}>
       <div className="card overflow-hidden hover:scale-[1.02] transition-transform duration-300 rounded-xl shadow">
-        {/* Cover */}
         <div className="h-64 bg-gray-100 relative">
           <Image
             src={normalizeImageSrc(cover)}
@@ -90,7 +82,6 @@ export default function BookCard({ book, horizontal = false }) {
           />
         </div>
 
-        {/* Info */}
         <div className="p-4">
           <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">
             {title}

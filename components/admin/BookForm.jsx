@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { z } from "zod";
+import Image from "next/image";
 
 const bookSchema = z.object({
   nama_buku: z.string().min(1, "Nama buku wajib diisi"),
@@ -14,8 +15,8 @@ const bookSchema = z.object({
     "Fiction",
     "Novel",
   ]),
-  gambar: z.string().url("Gambar harus berupa URL"),
-  status: z.enum(["tersedia", "dipinjam"]).optional(),
+  description: z.string().min(5, "Deskripsi wajib diisi"),
+  gambar: z.string().min(1, "Gambar wajib diisi"),
 });
 
 export default function BookForm({ initialData = null, onSubmit, onCancel }) {
@@ -23,19 +24,27 @@ export default function BookForm({ initialData = null, onSubmit, onCancel }) {
     nama_buku: "",
     author: "",
     genre_buku: "Self-Improvement",
+    description: "",
     gambar: "",
-    status: "tersedia",
   };
 
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
+  const [preview, setPreview] = useState("");
 
-  // Load initial data if editing
   useEffect(() => {
     if (initialData) {
-      setForm({ ...initialData });
+      setForm({
+        nama_buku: initialData.nama_buku,
+        author: initialData.author,
+        genre_buku: initialData.genre_buku,
+        description: initialData.description || "",
+        gambar: initialData.gambar,
+      });
+      setPreview(initialData.gambar);
     } else {
       setForm(defaultForm);
+      setPreview("");
       setErrors({});
     }
   }, [initialData]);
@@ -43,6 +52,23 @@ export default function BookForm({ initialData = null, onSubmit, onCancel }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
+
+    if (name === "gambar") {
+      setPreview(value);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileName = Date.now() + "-" + file.name;
+    const localPath = `/picture/${fileName}`;
+    setForm((prev) => ({ ...prev, gambar: localPath }));
+
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e) => {
@@ -51,57 +77,58 @@ export default function BookForm({ initialData = null, onSubmit, onCancel }) {
       const validated = bookSchema.parse(form);
       setErrors({});
       onSubmit(validated);
-
-      // Reset form only if adding new
-      if (!initialData) {
-        setForm(defaultForm);
-      }
+      if (!initialData) setForm(defaultForm);
     } catch (err) {
-      if (err.name === "ZodError" && err.errors) {
+      if (err.name === "ZodError") {
         const fieldErrors = {};
-        err.errors.forEach((e) => {
-          fieldErrors[e.path[0]] = e.message;
+        err.errors.forEach((er) => {
+          fieldErrors[er.path[0]] = er.message;
         });
         setErrors(fieldErrors);
-      } else {
-        console.error("Unexpected error:", err);
       }
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[#2e2e2e]"
+    >
       <div>
-        <label className="block mb-1 text-[#2e2e2e]">Nama Buku</label>
+        <label className="block mb-1">Nama Buku</label>
         <input
           type="text"
           name="nama_buku"
           value={form.nama_buku}
           onChange={handleChange}
-          className="w-full p-2 border rounded text-[#2e2e2e]"
+          className="w-full p-2 border rounded"
         />
-        {errors.nama_buku && <p className="text-red-500 text-xs">{errors.nama_buku}</p>}
+        {errors.nama_buku && (
+          <p className="text-red-500 text-xs">{errors.nama_buku}</p>
+        )}
       </div>
 
       <div>
-        <label className="block mb-1 text-[#2e2e2e]">Author</label>
+        <label className="block mb-1">Author</label>
         <input
           type="text"
           name="author"
           value={form.author}
           onChange={handleChange}
-          className="w-full p-2 border rounded text-[#2e2e2e]"
+          className="w-full p-2 border rounded"
         />
-        {errors.author && <p className="text-red-500 text-xs">{errors.author}</p>}
+        {errors.author && (
+          <p className="text-red-500 text-xs">{errors.author}</p>
+        )}
       </div>
 
       <div>
-        <label className="block mb-1 text-[#2e2e2e]">Genre</label>
+        <label className="block mb-1">Genre</label>
         <select
           name="genre_buku"
           value={form.genre_buku}
           onChange={handleChange}
-          className="w-full p-2 border rounded text-[#2e2e2e]"
+          className="w-full p-2 border rounded"
         >
           <option>Self-Improvement</option>
           <option>Politics</option>
@@ -110,46 +137,70 @@ export default function BookForm({ initialData = null, onSubmit, onCancel }) {
           <option>Fiction</option>
           <option>Novel</option>
         </select>
-        {errors.genre_buku && <p className="text-red-500 text-xs">{errors.genre_buku}</p>}
       </div>
 
       <div>
-        <label className="block mb-1 text-[#2e2e2e]">Gambar (URL)</label>
+        <label className="block mb-1">Deskripsi</label>
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+          rows={3}
+        />
+        {errors.description && (
+          <p className="text-red-500 text-xs">{errors.description}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-1">Upload Gambar</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block mb-1">Masukkan URL Gambar</label>
         <input
           type="text"
           name="gambar"
           value={form.gambar}
           onChange={handleChange}
-          className="w-full p-2 border rounded text-[#2e2e2e]"
+          className="w-full p-2 border rounded"
         />
-        {errors.gambar && <p className="text-red-500 text-xs">{errors.gambar}</p>}
       </div>
 
-      <div>
-        <label className="block mb-1 text-[#2e2e2e]">Status</label>
-        <select
-          name="status"
-          value={form.status}
-          onChange={handleChange}
-          className="w-full p-2 border rounded text-[#2e2e2e]"
-        >
-          <option value="tersedia">Tersedia</option>
-          <option value="dipinjam">Dipinjam</option>
-        </select>
-      </div>
+      {preview && (
+        <div className="md:col-span-2">
+          <p className="text-sm mb-1">Preview:</p>
+
+          <div className="relative w-32 h-40">
+            <Image
+              src={preview}
+              alt="Preview"
+              fill
+              className="object-cover rounded shadow"
+              unoptimized
+            />
+          </div>
+        </div>
+      )}
 
       <div className="md:col-span-2 flex gap-2 mt-2">
-        <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
           {initialData ? "Update Book" : "Add Book"}
         </button>
         {initialData && onCancel && (
           <button
             type="button"
-            onClick={() => {
-              onCancel();
-              setForm(defaultForm);
-              setErrors({});
-            }}
+            onClick={onCancel}
             className="bg-gray-500 text-white px-4 py-2 rounded"
           >
             Cancel

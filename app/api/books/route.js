@@ -16,10 +16,9 @@ export async function GET(request) {
     }
 
     const [books] = await pool.query(query, params);
-
     return NextResponse.json(books);
-  } catch (error) {
-    console.error("Error fetching books:", error);
+  } catch (err) {
+    console.error(err);
     return NextResponse.json(
       { error: "Failed to fetch books" },
       { status: 500 }

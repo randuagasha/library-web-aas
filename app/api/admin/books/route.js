@@ -1,61 +1,37 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { z } from "zod";
-
-// Zod schema
-const bookSchema = z.object({
-  nama_buku: z.string().min(1),
-  author: z.string().min(1),
-  genre_buku: z.enum([
-    "Self-Improvement",
-    "Politics",
-    "Biography",
-    "Politics-Biography",
-    "Fiction",
-    "Novel",
-  ]),
-  gambar: z.string().url(),
-  status: z.enum(["tersedia", "dipinjam"]).optional(),
-  id_buku: z.number().optional(),
-});
 
 export async function GET() {
   try {
-    const [books] = await pool.query(
+    const [rows] = await pool.query(
       "SELECT * FROM books ORDER BY created_at DESC"
     );
-    return NextResponse.json(books);
+    return NextResponse.json(rows);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Failed to fetch books" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch books" }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
     const body = await request.json();
-    const parsed = bookSchema.parse(body);
+    const { nama_buku, author, genre_buku, description, gambar } = body;
 
-    const [result] = await pool.query(
-      "INSERT INTO books (nama_buku, author, genre_buku, gambar, status) VALUES (?, ?, ?, ?, ?)",
-      [
-        parsed.nama_buku,
-        parsed.author,
-        parsed.genre_buku,
-        parsed.gambar,
-        parsed.status || "tersedia",
-      ]
-    );
+    const query = `
+      INSERT INTO books (nama_buku, author, genre_buku, description, gambar)
+      VALUES (?, ?, ?, ?, ?)
+    `;
 
-    return NextResponse.json({ success: true, id: result.insertId });
-  } catch (error) {
-    console.error(error);
-    if (error.name === "ZodError") {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
-    }
+    await pool.query(query, [
+      nama_buku,
+      author,
+      genre_buku,
+      description,
+      gambar,
+    ]);
+
+    return NextResponse.json({ message: "Book added successfully" });
+  } catch (err) {
     return NextResponse.json({ error: "Failed to add book" }, { status: 500 });
   }
 }
@@ -63,55 +39,37 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const parsed = bookSchema.parse(body);
+    const { id_buku, nama_buku, author, genre_buku, description, gambar } = body;
 
-    if (!parsed.id_buku)
-      return NextResponse.json(
-        { error: "Book ID is required" },
-        { status: 400 }
-      );
+    const query = `
+      UPDATE books 
+      SET nama_buku=?, author=?, genre_buku=?, description=?, gambar=?
+      WHERE id_buku=?
+    `;
 
-    await pool.query(
-      "UPDATE books SET nama_buku=?, author=?, genre_buku=?, gambar=?, status=? WHERE id_buku=?",
-      [
-        parsed.nama_buku,
-        parsed.author,
-        parsed.genre_buku,
-        parsed.gambar,
-        parsed.status || "tersedia",
-        parsed.id_buku,
-      ]
-    );
+    await pool.query(query, [
+      nama_buku,
+      author,
+      genre_buku,
+      description,
+      gambar,
+      id_buku,
+    ]);
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    if (error.name === "ZodError") {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
-    }
-    return NextResponse.json(
-      { error: "Failed to update book" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Book updated successfully" });
+  } catch (err) {
+    return NextResponse.json({ error: "Failed to update book" }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const id = new URL(request.url).searchParams.get("id");
 
-    if (!id)
-      return NextResponse.json({ error: "Book ID required" }, { status: 400 });
+    await pool.query("DELETE FROM books WHERE id_buku = ?", [id]);
 
-    await pool.query("DELETE FROM books WHERE id_buku=?", [id]);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Failed to delete book" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Book deleted successfully" });
+  } catch (err) {
+    return NextResponse.json({ error: "Failed to delete book" }, { status: 500 });
   }
 }

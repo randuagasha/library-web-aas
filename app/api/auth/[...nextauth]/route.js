@@ -3,7 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
 import pool from "@/lib/db";
 
-const handler = NextAuth({
+// Ini untuk dipakai di API lain
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -73,9 +74,10 @@ const handler = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60, // 30 hari
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
