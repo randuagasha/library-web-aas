@@ -49,8 +49,7 @@ export default function HomePage() {
                   Fresh Books Has Arrived
                 </h1>
                 <p className="text-[#2E2E2E] mb-6 leading-relaxed">
-                  Discover new books added by our admin. Explore and enjoy
-                  reading!
+                  Discover the latest additions to our collection. From history to self-development, explore knowledge without limits.
                 </p>
                 <Link href="/books">
                   <button className="bg-[#A0937D] rounded-md p-2 px-8">

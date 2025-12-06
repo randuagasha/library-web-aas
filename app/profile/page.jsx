@@ -6,11 +6,12 @@ import { useSession } from "next-auth/react";
 import Pagination from "@/components/pagination";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
+import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const [user, setUser] = useState(null);
-
   const [history, setHistory] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(5);
@@ -20,6 +21,14 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Modal rating state
+  const [ratingModal, setRatingModal] = useState({
+    show: false,
+    borrowId: null,
+    bookId: null,
+    rating: 0,
+  });
 
   // ------------------ FETCH USER ------------------
   useEffect(() => {
@@ -162,20 +171,35 @@ export default function ProfilePage() {
 
   // ------------------ RETURN BOOK ------------------
   async function handleReturn(borrow_id, book_id) {
+    // langsung tampilkan modal rating
+    setRatingModal({
+      show: true,
+      borrowId: borrow_id,
+      bookId: book_id,
+      rating: 0,
+    });
+  }
+
+  async function submitRating() {
+    const { borrowId, bookId, rating } = ratingModal;
+    if (rating <= 0) return alert("Please select a rating");
+
     try {
       const res = await fetch("/api/borrow", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ borrow_id, book_id }),
+        body: JSON.stringify({ borrow_id: borrowId, book_id: bookId, rating }),
       });
-
       const data = await res.json();
       if (res.ok) {
-        alert(
-          "Book returned successfully" +
-            (data.fine ? `, fine: Rp ${data.fine}` : "")
-        );
-        fetchHistory(page); // refresh history
+        alert("Book returned and rated successfully!");
+        setRatingModal({
+          show: false,
+          borrowId: null,
+          bookId: null,
+          rating: 0,
+        });
+        fetchHistory(page);
       } else {
         alert(data.error || "Failed to return book");
       }
@@ -197,7 +221,7 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok) {
         alert(data.message);
-        fetchHistory(page); // refresh history
+        fetchHistory(page);
       } else {
         alert(data.error || "Failed to extend borrow");
       }
@@ -206,6 +230,28 @@ export default function ProfilePage() {
       alert("Failed to extend borrow");
     }
   }
+
+  // ------------------ RENDER STARS ------------------
+  const renderStars = (rating, onClick) => {
+    return Array.from({ length: 5 }, (_, i) => {
+      if (onClick) {
+        return (
+          <StarSolid
+            key={i}
+            className={`w-6 h-6 cursor-pointer ${
+              i < rating ? "text-yellow-400" : "text-gray-300"
+            }`}
+            onClick={() => onClick(i + 1)}
+          />
+        );
+      }
+      return i < rating ? (
+        <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
+      ) : (
+        <StarOutline key={i} className="w-5 h-5 text-gray-300" />
+      );
+    });
+  };
 
   // ------------------ RENDER ------------------
   if (status === "loading")
@@ -394,6 +440,16 @@ export default function ProfilePage() {
                               Fine: Rp {h.fine_amount.toLocaleString()}
                             </div>
                           )}
+
+                          {/* show rating if exists */}
+                          {h.rating && (
+                            <div className="flex items-center mt-1">
+                              {renderStars(h.rating)}
+                              <span className="ml-2 text-sm text-gray-600">
+                                {h.rating.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -410,6 +466,41 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* ===================== MODAL RATING ===================== */}
+      {ratingModal.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-80 text-center">
+            <h2 className="text-lg font-semibold mb-4">Rate this book</h2>
+            <div className="flex justify-center mb-4">
+              {renderStars(ratingModal.rating, (r) =>
+                setRatingModal((s) => ({ ...s, rating: r }))
+              )}
+            </div>
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={() =>
+                  setRatingModal({
+                    show: false,
+                    borrowId: null,
+                    bookId: null,
+                    rating: 0,
+                  })
+                }
+                className="px-4 py-2 border rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitRating}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

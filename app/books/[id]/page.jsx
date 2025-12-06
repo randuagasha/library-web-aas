@@ -6,6 +6,8 @@ import Image from "next/image";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import BookCard from "@/components/bookCard";
+import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 
 export default function BookDetailPage() {
   const { id } = useParams();
@@ -26,13 +28,11 @@ export default function BookDetailPage() {
     loadBook();
   }, [id]);
 
-  // fetch recommended books (simple list) - styling only, doesn't change main logic
   useEffect(() => {
     let cancelled = false;
     async function loadRecs() {
       setRecsLoading(true);
       try {
-        // try to fetch a list of books; if your API uses a different route adjust here
         const res = await fetch(`/api/books`);
         if (!res.ok) {
           setRecs([]);
@@ -40,10 +40,10 @@ export default function BookDetailPage() {
         }
         const data = await res.json();
         if (!cancelled) {
-          // if API returns array directly or { data: [...] }
           const arr = Array.isArray(data) ? data : data.data || [];
-          // exclude current book and take up to 12
-          setRecs(arr.filter((b) => String(b.id) !== String(id)).slice(0, 12));
+          setRecs(
+            arr.filter((b) => String(b.id_buku) !== String(id)).slice(0, 12)
+          );
         }
       } catch (err) {
         console.error("recs fetch error", err);
@@ -63,15 +63,12 @@ export default function BookDetailPage() {
         method: "POST",
         body: JSON.stringify({ book_id: id }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         alert(data.error);
         setLoadingBorrow(false);
         return;
       }
-
       alert("Borrow success!");
       router.push("/profile");
     } catch (err) {
@@ -94,7 +91,6 @@ export default function BookDetailPage() {
           <Header />
         </div>
 
-        {/* CONTENT (push down to avoid header) */}
         <main className="pt-24 px-8 pb-12 max-w-6xl mx-auto">
           {/* Back arrow */}
           <div className="mb-4">
@@ -142,7 +138,7 @@ export default function BookDetailPage() {
                     </h1>
                     <p className="text-sm text-gray-600 mt-1">{book.author}</p>
 
-                    {/* tags (if available) */}
+                    {/* tags */}
                     {book.tags && book.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {book.tags.map((t, i) => (
@@ -157,10 +153,38 @@ export default function BookDetailPage() {
                     )}
 
                     {/* availability */}
-                    <div className="mt-4">
+                    <div className="mt-4 flex items-center gap-4">
                       <span className="text-green-600 font-semibold">
                         Available ({book.available_count ?? 0})
                       </span>
+
+                      {/* rating */}
+                      <div className="flex items-center gap-1">
+                        {book.rating ? (
+                          <>
+                            {Array.from({ length: 5 }, (_, i) =>
+                              i < Math.floor(book.rating) ? (
+                                <StarSolid
+                                  key={i}
+                                  className="w-5 h-5 text-yellow-400"
+                                />
+                              ) : (
+                                <StarOutline
+                                  key={i}
+                                  className="w-5 h-5 text-gray-300"
+                                />
+                              )
+                            )}
+                            <span className="ml-2 text-sm text-gray-600">
+                              {book.rating.toFixed(1)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 text-sm">
+                            No ratings yet
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

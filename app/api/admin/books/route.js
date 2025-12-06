@@ -8,7 +8,10 @@ export async function GET() {
     );
     return NextResponse.json(rows);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch books" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch books" },
+      { status: 500 }
+    );
   }
 }
 
@@ -39,7 +42,8 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { id_buku, nama_buku, author, genre_buku, description, gambar } = body;
+    const { id_buku, nama_buku, author, genre_buku, description, gambar } =
+      body;
 
     const query = `
       UPDATE books 
@@ -58,7 +62,10 @@ export async function PUT(request) {
 
     return NextResponse.json({ message: "Book updated successfully" });
   } catch (err) {
-    return NextResponse.json({ error: "Failed to update book" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update book" },
+      { status: 500 }
+    );
   }
 }
 
@@ -70,6 +77,9 @@ export async function DELETE(request) {
 
     return NextResponse.json({ message: "Book deleted successfully" });
   } catch (err) {
-    return NextResponse.json({ error: "Failed to delete book" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete book" },
+      { status: 500 }
+    );
   }
 }

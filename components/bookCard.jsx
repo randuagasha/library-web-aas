@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
+import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
 
 export default function BookCard({ book, horizontal = false }) {
   const title = book.nama_buku || "Untitled";
@@ -20,14 +22,16 @@ export default function BookCard({ book, horizontal = false }) {
     return src;
   };
 
-  // Render rating
+  // Render rating dengan Heroicons
   const renderStars = (rating) => {
     const full = Math.floor(rating || 0);
-    return Array.from({ length: 5 }, (_, i) => (
-      <span key={i} className={i < full ? "text-yellow-400" : "text-gray-300"}>
-        ⭐
-      </span>
-    ));
+    return Array.from({ length: 5 }, (_, i) => {
+      return i < full ? (
+        <StarSolid key={i} className="w-5 h-5 text-yellow-400" />
+      ) : (
+        <StarOutline key={i} className="w-5 h-5 text-gray-300" />
+      );
+    });
   };
 
   /* ================= HORIZONTAL CARD ================= */
@@ -38,7 +42,6 @@ export default function BookCard({ book, horizontal = false }) {
           isBorrowed ? "opacity-50 cursor-not-allowed" : ""
         }`}
       >
-        {/* BADGE */}
         {isBorrowed && (
           <span className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs px-2 py-1 rounded">
             Borrowed
@@ -83,7 +86,6 @@ export default function BookCard({ book, horizontal = false }) {
         isBorrowed ? "opacity-50 cursor-not-allowed" : ""
       }`}
     >
-      {/* BADGE */}
       {isBorrowed && (
         <span className="absolute top-2 right-2 z-10 bg-red-600 text-white text-xs px-2 py-1 rounded">
           Borrowed
